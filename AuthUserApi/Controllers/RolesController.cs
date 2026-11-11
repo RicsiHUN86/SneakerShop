@@ -1,5 +1,6 @@
-using AuthUserApi.Models;
+﻿using AuthUserApi.Models;
 using AuthUserApi.Models.DTOs;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace AuthUserApi.Controllers
 {
     [Route("roles")]
     [ApiController]
-    public class RolesController : Controller
+    public class RolesController : ControllerBase
     {
         private readonly AuthuserContext _context;
 
@@ -16,64 +17,86 @@ namespace AuthUserApi.Controllers
             _context = context;
         }
 
-        [HttpPost("NewRole")]
-        public async Task<IActionResult> NewRole([FromBody] NewRoleDTO newRoleDTO)
+        [HttpPost("newRole")]
+        public async Task<IActionResult> NewRole([FromBody] NewRoleDTO newRoleDto)
         {
             var role = new Role
             {
                 Id = Guid.NewGuid(),
-                Name = newRoleDTO.Name,
-                RegTime = DateTime.Now
+                Name = newRoleDto.Name,
+              
             };
 
-            await _context.Roles.AddAsync(role);
-            await _context.SaveChangesAsync();
-            return StatusCode(201, new { message = "Felvéve", result = role });
+            if (role is not null)
+            {
+                await _context.Roles.AddAsync(role);
+                await _context.SaveChangesAsync();
+
+                return StatusCode(201, new { message = "Felvéve", result = role });
+            }
+
+            return StatusCode(400, new { message = "Hiba", result = role });
         }
 
-        [HttpGet("AllRole")]
+        [HttpGet("allRole")]
         public async Task<IActionResult> AllRole()
         {
             var roles = await _context.Roles.ToListAsync();
-            return StatusCode(200, new { message = "Lekérdezve", result = roles });
+
+            if (roles is not null)
+            {
+                return StatusCode(200, new { message = "Lekérdezve", result = roles });
+            }
+
+            return StatusCode(400, new { message = "Hiba", result = roles });
         }
 
-        [HttpGet("ById")]
+        [HttpGet("byId")]
         public async Task<IActionResult> RoleById([FromQuery] Guid id)
         {
-            var role = await _context.Roles.SingleOrDefaultAsync(r => r.Id == id);
+            var role = await _context.Roles.SingleOrDefaultAsync(u => u.Id == id);
+
             if (role is not null)
             {
                 return StatusCode(200, new { message = "Lekérdezve", result = role });
             }
-            return StatusCode(404, new { message = "Nem található szerepkör", result = role });
+
+            return StatusCode(404, new { message = "Nincs találat", result = role });
         }
 
-        [HttpPut("UpdateRole")]
-        public async Task<IActionResult> UpdateRole([FromQuery] Guid id, [FromBody] UpdateRoleDTO updateRoleDTO)
+        [HttpPut("updateRole")]
+        public async Task<IActionResult> UpdateRole([FromQuery] Guid id, UpdateRoleDTO updateRoleDto)
         {
-            var role = await _context.Roles.SingleOrDefaultAsync(r => r.Id == id);
+            var role = await _context.Roles.FirstOrDefaultAsync(u => u.Id == id);
+
             if (role is not null)
             {
-                role.Name = updateRoleDTO.Name;
+                role.Name = updateRoleDto.Name;
+             
                 _context.Roles.Update(role);
                 await _context.SaveChangesAsync();
+
                 return StatusCode(200, new { message = "Frissítve", result = role });
             }
-            return StatusCode(404, new { message = "Nem található szerepkör", result = role });
+
+            return StatusCode(404, new { message = "Nincs találat", result = role });
         }
 
-        [HttpDelete("DeleteRole")]
-        public async Task<IActionResult> DeleteRole([FromQuery] Guid id)
+        [HttpDelete("deleteRole")]
+        public async Task<IActionResult> DeleteUser([FromQuery] Guid id)
         {
             var role = await _context.Roles.FindAsync(id);
+
             if (role is not null)
             {
                 _context.Roles.Remove(role);
                 await _context.SaveChangesAsync();
-                return StatusCode(200, new { message = "Törölve", result = role });
+
+                return StatusCode(200, new { message = "Tötrölve", result = role.Name });
             }
-            return StatusCode(404, new { message = "Nem található szerepkör", result = role });
+
+            return StatusCode(404, new { message = "Nincs találat", result = role });
+
         }
     }
 }
